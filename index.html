@@ -549,14 +549,12 @@
 </head>
 <body>
 
-<!-- ═══════ HEADER ═══════ -->
 <div class="app-header">
   <h4>✦ Admin Penjualan</h4>
   <p>Halimah.id</p>
   <button id="btnInstall"><i class="fas fa-download me-1"></i>Install Aplikasi</button>
 </div>
 
-<!-- ═══════ FORM INPUT ═══════ -->
 <div id="formInput" class="page-section active">
   <div class="card">
     <div class="section-title mb-4" id="formTitle">
@@ -620,7 +618,6 @@
         </div>
       </div>
 
-      <!-- PAYMENT BOX -->
       <div class="payment-box">
         <div class="payment-box-title"><i class="fas fa-money-bill-wave"></i> Pembayaran</div>
 
@@ -712,14 +709,13 @@
   </div>
 </div>
 
-<!-- ═══════ HALAMAN DATA ═══════ -->
 <div id="halamanData" class="page-section">
   <div class="card">
     <div class="d-flex justify-content-between align-items-center mb-3">
       <div class="section-title m-0">
         <span class="icon-wrap"><i class="fas fa-database"></i></span>Database
       </div>
-      <div class="d-flex gap-2">
+      <div class="d-flex flex-wrap gap-2 justify-content-end">
         <input type="file" id="fileImport" accept=".xlsx,.xls" style="display:none;">
         <button class="btn-icon btn-info-custom" onclick="document.getElementById('fileImport').click()">
           <i class="fas fa-file-import"></i> Import
@@ -727,7 +723,15 @@
         <button class="btn-icon btn-success-custom" onclick="exportToExcel()">
           <i class="fas fa-file-excel"></i> Export
         </button>
-      </div>
+        
+        <input type="file" id="fileRestore" accept=".json" style="display:none;">
+        <button class="btn-icon" style="background:#fef08a; color:#854d0e; border: 1px solid #fde047;" onclick="backupData()">
+          <i class="fas fa-cloud-download-alt"></i> Backup
+        </button>
+        <button class="btn-icon" style="background:#e9d5ff; color:#6b21a8; border: 1px solid #d8b4fe;" onclick="document.getElementById('fileRestore').click()">
+          <i class="fas fa-cloud-upload-alt"></i> Restore
+        </button>
+        </div>
     </div>
 
     <div class="filter-box">
@@ -754,7 +758,6 @@
   </div>
 </div>
 
-<!-- ═══════ GRAFIK ═══════ -->
 <div id="halamanGrafik" class="page-section">
   <div class="card">
     <div class="section-title mb-4">
@@ -764,7 +767,6 @@
   </div>
 </div>
 
-<!-- ═══════ FEE ═══════ -->
 <div id="halamanFee" class="page-section">
   <div class="card">
     <div class="section-title mb-4">
@@ -787,7 +789,6 @@
   </div>
 </div>
 
-<!-- ═══════ PIUTANG ═══════ -->
 <div id="halamanPiutang" class="page-section">
   <div class="card">
     <div class="section-title mb-4">
@@ -814,7 +815,6 @@
   </div>
 </div>
 
-<!-- ═══════ BOTTOM NAV ═══════ -->
 <div class="bottom-nav">
   <div class="nav-item active" id="navInput" onclick="switchTab('formInput',this)">
     <i class="fas fa-plus-circle"></i><span>Input</span>
@@ -833,7 +833,6 @@
   </div>
 </div>
 
-<!-- ═══════ INVOICE MODAL ═══════ -->
 <div class="modal fade" id="invoiceModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content">
@@ -845,7 +844,6 @@
       </div>
       <div class="modal-body p-3">
 
-        <!-- Tab switcher -->
         <div class="inv-tab-btns">
           <button class="inv-tab-btn active" id="tabBtnKasir" onclick="switchInvTab('kasir')">
             <i class="fas fa-receipt"></i> Struk Kasir
@@ -855,12 +853,10 @@
           </button>
         </div>
 
-        <!-- Kasir tab -->
         <div class="inv-tab-pane active" id="invTabKasir">
           <div id="invoicePrintArea"></div>
         </div>
 
-        <!-- Text tab -->
         <div class="inv-tab-pane" id="invTabText">
           <div style="position:relative">
             <pre id="textInvoicePreview"></pre>
@@ -872,8 +868,7 @@
 
       </div>
       <div class="modal-footer d-flex flex-wrap gap-2 justify-content: center;" id="invFooterBtns">
-        <!-- buttons injected by JS per tab -->
-      </div>
+        </div>
     </div>
   </div>
 </div>
@@ -1467,6 +1462,53 @@
       document.getElementById('fileImport').value = '';
     };
     reader.readAsArrayBuffer(file);
+  });
+
+  /* ══════════════════════════
+     FITUR BACKUP & RESTORE LOKAL (.json)
+  ══════════════════════════ */
+  function backupData() {
+    const data = getLocalData();
+    if(data.length === 0) {
+      alert('Tidak ada data untuk dibackup!');
+      return;
+    }
+    const dataStr = JSON.stringify(data, null, 2);
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Backup_HalimahID_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  document.getElementById('fileRestore').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      try {
+        const jsonData = JSON.parse(ev.target.result);
+        if(!Array.isArray(jsonData)) {
+          alert('Format file backup tidak valid!');
+          return;
+        }
+        if(confirm(`Ditemukan ${jsonData.length} data dalam file backup.\n\nPERINGATAN: Aksi ini akan menimpa (overwrite) data saat ini dengan data dari backup.\nApakah Anda yakin ingin melanjutkan?`)) {
+          saveLocalData(jsonData);
+          loadAllData();
+          loadDropdowns();
+          alert('Restore data berhasil!');
+        }
+      } catch(err) {
+        alert('Gagal membaca file backup! Pastikan file berformat .json yang valid.');
+        console.error(err);
+      }
+      document.getElementById('fileRestore').value = ''; // reset input
+    };
+    reader.readAsText(file);
   });
 
   /* PWA install */
