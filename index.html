@@ -591,11 +591,13 @@
       <div class="row g-3 mb-3">
         <div class="col-6">
           <label class="form-label-custom">Brand</label>
-          <input type="text" class="form-control" name="brand" id="brand" autocomplete="off">
+          <input type="text" class="form-control" name="brand" id="brand" list="listBrand" autocomplete="off">
+          <datalist id="listBrand"></datalist>
         </div>
         <div class="col-6">
           <label class="form-label-custom">Series</label>
-          <input type="text" class="form-control" name="series" id="series" autocomplete="off">
+          <input type="text" class="form-control" name="series" id="series" list="listSeries" autocomplete="off">
+          <datalist id="listSeries"></datalist>
         </div>
       </div>
 
@@ -634,8 +636,6 @@
           <div class="cicilan-pill" onclick="showCicilanPane(3,this)">Cicilan 3</div>
           <div class="cicilan-pill" onclick="showCicilanPane(4,this)">Cicilan 4</div>
           <div class="cicilan-pill" onclick="showCicilanPane(5,this)">Cicilan 5</div>
-          <div class="cicilan-pill" onclick="showCicilanPane(6,this)">Cicilan 6</div>
-          <div class="cicilan-pill" onclick="showCicilanPane(7,this)">Cicilan 7</div>
         </div>
 
         <div class="cicilan-pane active" id="pane-0">
@@ -662,14 +662,7 @@
           <label class="form-label-custom">Cicilan 5</label>
           <input type="text" class="form-control format-uang" id="cicilan5" name="cicilan5" placeholder="0" autocomplete="off">
         </div>
-        <div class="cicilan-pane" id="pane-6">
-          <label class="form-label-custom">Cicilan 6</label>
-          <input type="text" class="form-control format-uang" id="cicilan6" name="cicilan6" placeholder="0" autocomplete="off">
-        </div>
-        <div class="cicilan-pane" id="pane-7">
-          <label class="form-label-custom">Cicilan 7</label>
-          <input type="text" class="form-control format-uang" id="cicilan7" name="cicilan7" placeholder="0" autocomplete="off">
-        </div>
+
 
         <div class="sisa-box">
           <span class="sisa-label"><i class="fas fa-wallet me-1"></i>Sisa Bayar</span>
@@ -741,6 +734,14 @@
         <div class="col-4"><input type="text" class="form-control form-control-sm" id="fSeries" placeholder="Series" onkeyup="filterTabel()"></div>
         <div class="col-4"><input type="text" class="form-control form-control-sm" id="fProduk" placeholder="Produk" onkeyup="filterTabel()"></div>
       </div>
+    </div>
+
+    <label class="form-label-custom mt-2">📝 Catatan List Pesanan (Sesuai Filter)</label>
+    <div style="position:relative; margin-bottom: 16px;">
+      <textarea id="listPesananText" class="form-control" rows="4" readonly style="font-family: 'Courier New', monospace; font-size: 12px; background: #1e1a3a; color: #e8e6ff; padding-right: 80px;"></textarea>
+      <button class="copy-overlay-btn" id="btnCopyList" onclick="copyListPesananAction()">
+        <i class="fas fa-copy me-1"></i>Salin
+      </button>
     </div>
 
     <div class="table-responsive">
@@ -972,6 +973,19 @@
   function renderTabel(data) {
     const tbody = document.getElementById('tabelDataBody');
     tbody.innerHTML = '';
+    
+    // UPDATE CATATAN LIST PESANAN
+    let textList = data.map((d, i) => {
+      let p = [];
+      if(d.brand) p.push(d.brand);
+      if(d.series) p.push(d.series);
+      if(d.namaProduk) p.push(d.namaProduk);
+      let itemStr = p.join(' - ');
+      let uk = d.ukuran ? `(Size: ${d.ukuran})` : '';
+      return `${i+1}. ${itemStr} ${uk}`.trim();
+    });
+    document.getElementById('listPesananText').value = textList.length > 0 ? textList.join('\n') : 'Tidak ada data.';
+    
     if(data.length === 0) {
       tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4" style="color:var(--text-muted)"><i class="fas fa-inbox me-2"></i>Belum ada data</td></tr>';
       return;
@@ -1000,6 +1014,34 @@
           </td>
         </tr>`;
     });
+  }
+
+  // FUNGSI COPY LIST PESANAN
+  function copyListPesananAction() {
+    const text = document.getElementById('listPesananText').value;
+    if (!text || text === 'Tidak ada data.') return;
+    const btn  = document.getElementById('btnCopyList');
+    if(navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        btn.innerHTML = '<i class="fas fa-check" style="margin-right:4px"></i>Tersalin!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.innerHTML = '<i class="fas fa-copy" style="margin-right:4px"></i>Salin';
+          btn.classList.remove('copied');
+        }, 2500);
+      });
+    } else {
+      let ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+      btn.innerHTML = '<i class="fas fa-check" style="margin-right:4px"></i>Tersalin!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.innerHTML = '<i class="fas fa-copy" style="margin-right:4px"></i>Salin';
+        btn.classList.remove('copied');
+      }, 2500);
+    }
   }
 
   function hapusData(id) {
@@ -1053,12 +1095,19 @@
 
   function loadDropdowns() {
     let data     = getLocalData();
+    
+    // PEMBARUAN: Menambahkan Brand dan Series ke dalam Datalist (Dropdown otomatis)
     let pembeli  = [...new Set(data.map(d => d.namaPembeli).filter(Boolean))];
     let produk   = [...new Set(data.map(d => d.namaProduk).filter(Boolean))];
     let marketer = [...new Set(data.map(d => d.marketer).filter(Boolean))];
+    let brand    = [...new Set(data.map(d => d.brand).filter(Boolean))];
+    let series   = [...new Set(data.map(d => d.series).filter(Boolean))];
+    
     document.getElementById('listPembeli').innerHTML  = pembeli.map(x  => `<option value="${x}">`).join('');
     document.getElementById('listProduk').innerHTML   = produk.map(x   => `<option value="${x}">`).join('');
     document.getElementById('listMarketer').innerHTML = marketer.map(x => `<option value="${x}">`).join('');
+    document.getElementById('listBrand').innerHTML    = brand.map(x    => `<option value="${x}">`).join('');
+    document.getElementById('listSeries').innerHTML   = series.map(x   => `<option value="${x}">`).join('');
   }
 
   function loadChart() {
@@ -1192,6 +1241,7 @@
       <div class="inv-kasir-wrap">
         <div class="inv-kasir-header">
           <div class="inv-kasir-store">✦ HALIMAH.ID</div>
+          <div class="inv-kasir-tagline">Admin Penjualan — Fashion Terpercaya</div>
           <div class="inv-kasir-invoice-no">${invNo}</div>
           <div class="inv-kasir-date">📅 ${tgl}</div>
         </div>
@@ -1301,7 +1351,7 @@
     t += `Nama     : ${d.namaPembeli}\n`;
     t += `Status   : ${d.status}\n\n`;
 
-    t += `*DETAIL PRODUK*\n`;
+    t += `👗 *DETAIL PRODUK*\n`;
     if(d.brand)      t += `Brand    : ${d.brand}\n`;
     if(d.series)     t += `Series   : ${d.series}\n`;
     t += `Produk   : ${d.namaProduk}\n`;
